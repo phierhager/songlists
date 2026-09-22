@@ -72,6 +72,13 @@ archive file, and failures are logged to `downloads/failed_tracks.txt`.
   The script already works around the currently-known-bad client and
   retries with alternates; if you still hit it, run `yt-dlp -U` for the
   latest fix and see the script's troubleshooting comment.
+- **"Only images are available for download" / "Requested format is not
+  available".** In practice this turned out to be the real blocker in
+  testing: yt-dlp needs a JS runtime (deno/node/bun) installed to solve
+  YouTube's signature challenges, and without one it can't produce a
+  playable audio format on any client. The script now checks for this at
+  startup and prints the one-line deno install command if none is found —
+  install it and re-run.
 - A small number of tracks are remixes/collabs rather than pure originals
   (matching your reference playlist's own style, which also favors
   extended/remix versions).

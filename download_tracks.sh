@@ -60,6 +60,20 @@ if ! command -v ffmpeg >/dev/null 2>&1; then
   echo "ffmpeg', 'brew install ffmpeg') and re-run for full quality." >&2
 fi
 
+if ! command -v deno >/dev/null 2>&1 && ! command -v node >/dev/null 2>&1 \
+    && ! command -v bun >/dev/null 2>&1 && ! command -v qjs >/dev/null 2>&1; then
+  echo "WARNING: no JS runtime (deno/node/bun/qjs) found on PATH. yt-dlp needs" >&2
+  echo "one to solve YouTube's signature challenges - without it, essentially" >&2
+  echo "every track will fail with 'Only images are available for download' or" >&2
+  echo "'Requested format is not available'. This is very likely the actual" >&2
+  echo "cause if you've been seeing those errors. Install deno (simplest, a" >&2
+  echo "single static binary, no other dependencies):" >&2
+  echo "    curl -fsSL https://deno.land/x/install/install.sh | sh" >&2
+  echo "then add the printed line to your shell rc file (or open a new" >&2
+  echo "terminal) so 'deno' is on PATH, and re-run this script." >&2
+  echo >&2
+fi
+
 if [[ ! -f "$MANIFEST" ]]; then
   echo "ERROR: manifest file not found at $MANIFEST" >&2
   echo "(expected a tab-separated file: index<TAB>artist<TAB>title<TAB>url)" >&2
