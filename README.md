@@ -64,6 +64,14 @@ archive file, and failures are logged to `downloads/failed_tracks.txt`.
   MP3 download test from here. This is very unlikely to affect your own
   machine; if it does, see the troubleshooting note at the top of
   `download_tracks.sh`.
+- **yt-dlp/YouTube 403 errors on the actual audio stream** (distinct from
+  the bot-check above — this one happens *after* yt-dlp already found the
+  video/thumbnail). This is an active, fast-moving cat-and-mouse issue
+  between yt-dlp and YouTube (see yt-dlp issues #17456, #17348): certain
+  player clients return stream URLs that need a PO token they don't have.
+  The script already works around the currently-known-bad client and
+  retries with alternates; if you still hit it, run `yt-dlp -U` for the
+  latest fix and see the script's troubleshooting comment.
 - A small number of tracks are remixes/collabs rather than pure originals
   (matching your reference playlist's own style, which also favors
   extended/remix versions).

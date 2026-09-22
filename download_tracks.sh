@@ -9,17 +9,33 @@
 # Requirements:
 #   - yt-dlp   (pip install -U yt-dlp   /   brew install yt-dlp)
 #   - ffmpeg   (needed for MP3 extraction + embedding thumbnail/metadata)
+#   - a JS runtime (deno recommended: https://deno.com/) - yt-dlp needs one
+#     to solve YouTube's signature/challenge JS; without it you'll see
+#     "Signature solving failed" warnings and some formats may be missing.
 #
 # Usage:
 #   ./download_tracks.sh                # downloads everything into ./downloads
 #   OUTPUT_DIR=~/Music/techno ./download_tracks.sh
 #   START=101 END=200 ./download_tracks.sh    # only download tracks 101-200
 #
-# Troubleshooting "Sign in to confirm you're not a bot":
-#   YouTube occasionally challenges yt-dlp this way, especially from cloud/VPN
-#   IPs. Update yt-dlp first (pip install -U yt-dlp); if it persists, add
-#   --cookies-from-browser chrome (or firefox/etc.) to the yt-dlp call below,
-#   or export cookies with a browser extension and pass --cookies FILE.
+# Troubleshooting:
+#
+#   "Sign in to confirm you're not a bot" - YouTube challenging yt-dlp,
+#   especially from cloud/VPN IPs. Update yt-dlp first (pip install -U
+#   yt-dlp); if it persists, add --cookies-from-browser chrome (or
+#   firefox/etc.) to the yt-dlp call below, or export cookies with a
+#   browser extension and pass --cookies FILE.
+#
+#   "unable to download video data: HTTP Error 403: Forbidden" (after it
+#   already found the video/thumbnail) - a different, known yt-dlp/YouTube
+#   issue: some player clients (notably android_vr, and others as YouTube
+#   keeps changing this) return stream URLs that 403 without a PO token.
+#   This script already excludes android_vr and retries with alternate
+#   clients below. If it still happens: run `yt-dlp -U` to get the latest
+#   fix (this is a fast-moving cat-and-mouse game with YouTube - see
+#   https://github.com/yt-dlp/yt-dlp/issues/17456 and /issues/17348), and
+#   as a last resort add --cookies-from-browser as above, which YouTube
+#   generally trusts more than an anonymous session.
 #
 set -uo pipefail
 
@@ -76,20 +92,32 @@ while IFS=$'\t' read -r idx artist title url; do
 
   echo "[$idx/$total] $artist - $title"
 
-  if yt-dlp \
-      --extract-audio \
-      --audio-format mp3 \
-      --audio-quality 0 \
-      --embed-thumbnail \
-      --embed-metadata \
-      --download-archive "$ARCHIVE_FILE" \
-      --no-playlist \
-      --ignore-errors \
-      --no-abort-on-error \
-      --sleep-requests 1 \
-      --min-sleep-interval 2 \
-      --max-sleep-interval 5 \
-      -o "$out_template" \
+  common_args=(
+    --extract-audio
+    --audio-format mp3
+    --audio-quality 0
+    --embed-thumbnail
+    --embed-metadata
+    --download-archive "$ARCHIVE_FILE"
+    --no-playlist
+    --ignore-errors
+    --no-abort-on-error
+    --sleep-requests 1
+    --min-sleep-interval 2
+    --max-sleep-interval 5
+    -o "$out_template"
+  )
+
+  # Primary attempt: default clients minus android_vr, which has a known,
+  # currently-active bug returning 403-without-PO-token stream URLs
+  # (yt-dlp issues #17456 / #17348). If that still 403s (YouTube's client
+  # blocklist shifts often), retry once with an explicit alternate client
+  # list before giving up on this track.
+  if yt-dlp "${common_args[@]}" \
+      --extractor-args "youtube:player_client=default,-android_vr" \
+      "$url" \
+    || yt-dlp "${common_args[@]}" \
+      --extractor-args "youtube:player_client=tv,web_safari" \
       "$url" ; then
     ok=$((ok + 1))
   else
